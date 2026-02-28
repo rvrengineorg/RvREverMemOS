@@ -52,6 +52,7 @@ def get_tenant_mongo_config() -> Optional[Dict[str, Any]]:
             "username": env_fallback_config.get("username"),
             "password": env_fallback_config.get("password"),
             "database": generate_tenant_database_name(DEFAULT_DATABASE_NAME),
+            "uri_params": env_fallback_config.get("uri_params", ""),
         }
         logger.info(
             "✅ MongoDB information missing in tenant [%s] configuration, using environment variable configuration to complete: %s, database=%s",
@@ -70,6 +71,8 @@ def get_tenant_mongo_config() -> Optional[Dict[str, Any]]:
             # database: use if specified in tenant configuration, otherwise generate tenant-aware name
             "database": mongo_config.get("database")
             or generate_tenant_database_name(DEFAULT_DATABASE_NAME),
+            "uri_params": mongo_config.get("uri_params")
+            or env_fallback_config.get("uri_params", ""),
         }
     else:
         # Use separate connection parameters
@@ -84,6 +87,8 @@ def get_tenant_mongo_config() -> Optional[Dict[str, Any]]:
             # database: use if specified in tenant configuration, otherwise generate tenant-aware name
             "database": mongo_config.get("database")
             or generate_tenant_database_name(DEFAULT_DATABASE_NAME),
+            "uri_params": mongo_config.get("uri_params")
+            or env_fallback_config.get("uri_params", ""),
         }
 
     logger.debug(
@@ -149,12 +154,17 @@ def load_mongo_config_from_env() -> Dict[str, Any]:
         - MONGODB_USERNAME: Username (optional)
         - MONGODB_PASSWORD: Password (optional)
         - MONGODB_DATABASE: Database name (default: memsys)
+        - MONGODB_URI_PARAMS: URI parameters (e.g. authSource=memsys&socketTimeoutMS=15000)
     """
     # Prioritize using MONGODB_URI
     uri = os.getenv("MONGODB_URI")
     if uri:
         logger.info("📋 Loading configuration from environment variable MONGODB_URI")
-        return {"uri": uri, "database": get_default_database_name()}
+        return {
+            "uri": uri,
+            "database": get_default_database_name(),
+            "uri_params": os.getenv("MONGODB_URI_PARAMS", ""),
+        }
 
     # Read individual configuration items separately
     host = os.getenv("MONGODB_HOST", "localhost")
@@ -162,6 +172,7 @@ def load_mongo_config_from_env() -> Dict[str, Any]:
     username = os.getenv("MONGODB_USERNAME")
     password = os.getenv("MONGODB_PASSWORD")
     database = get_default_database_name()
+    uri_params = os.getenv("MONGODB_URI_PARAMS", "")
 
     logger.info(
         "📋 Loading configuration from environment variables: host=%s, port=%s, database=%s",
@@ -176,6 +187,7 @@ def load_mongo_config_from_env() -> Dict[str, Any]:
         "username": username,
         "password": password,
         "database": database,
+        "uri_params": uri_params,
     }
 
 

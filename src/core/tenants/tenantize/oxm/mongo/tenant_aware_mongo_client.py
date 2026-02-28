@@ -239,9 +239,17 @@ class TenantAwareMongoClient(AsyncMongoClient):
         # Prioritize uri if provided
         uri = config.get("uri")
         if uri:
-            # Merge extra parameters (excluding uri and database)
+            # Append URI parameters (e.g. authSource)
+            uri_params = config.get("uri_params", "")
+            if uri_params:
+                separator = "&" if "?" in uri else "?"
+                uri = f"{uri}{separator}{uri_params}"
+
+            # Merge extra parameters (excluding uri, database, and uri_params)
             extra_kwargs = {
-                k: v for k, v in config.items() if k not in ("uri", "database")
+                k: v
+                for k, v in config.items()
+                if k not in ("uri", "database", "uri_params")
             }
             # User-provided parameters have higher priority
             conn_kwargs.update(extra_kwargs)
@@ -265,11 +273,18 @@ class TenantAwareMongoClient(AsyncMongoClient):
         else:
             connection_string = f"mongodb://{host}:{port}"
 
+        # Append URI parameters (e.g. authSource)
+        uri_params = config.get("uri_params", "")
+        if uri_params:
+            separator = "&" if "?" in connection_string else "?"
+            connection_string += f"{separator}{uri_params}"
+
         # Merge extra parameters
         extra_kwargs = {
             k: v
             for k, v in config.items()
-            if k not in ("host", "port", "username", "password", "database")
+            if k
+            not in ("host", "port", "username", "password", "database", "uri_params")
         }
         # User-provided parameters have higher priority
         conn_kwargs.update(extra_kwargs)
